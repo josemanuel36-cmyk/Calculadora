@@ -1,0 +1,296 @@
+
+using System;
+using System.Globalization;
+
+namespace ConsoleCalculator
+{
+    internal class Program
+    {
+        private const double PassingAverage = 70.0;
+        private const double MinimumGrade = 0.0;
+        private const double MaximumGrade = 100.0;
+        private const int MinimumGradeCount = 1;
+        private const int MaximumGradeCount = 20;
+
+        private static readonly string[] MenuOptions =
+        {
+            "Add",
+            "Subtract",
+            "Multiply",
+            "Divide",
+            "Check if a student passed",
+            "Exit"
+        };
+
+        private static void Main()
+        {
+            bool isRunning = true;
+
+            while (isRunning)
+            {
+                Console.Clear();
+                DisplayMenu();
+
+                try
+                {
+                    int selectedOption = ReadWholeNumberInRange("Select an option: ", 1, MenuOptions.Length);
+
+                    switch (selectedOption)
+                    {
+                        case 1:
+                            ExecuteArithmeticOperation("Addition", "+");
+                            break;
+                        case 2:
+                            ExecuteArithmeticOperation("Subtraction", "-");
+                            break;
+                        case 3:
+                            ExecuteArithmeticOperation("Multiplication", "*");
+                            break;
+                        case 4:
+                            ExecuteArithmeticOperation("Division", "/");
+                            break;
+                        case 5:
+                            CheckStudentResult();
+                            break;
+                        case 6:
+                            isRunning = !ConfirmExit();
+                            break;
+                    }
+                }
+                catch (DivideByZeroException)
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("Error: division by zero is not allowed.");
+                }
+                catch (OverflowException)
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("Error: the result is too large to be calculated.");
+                }
+                catch (Exception exception)
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("Unexpected error: " + exception.Message);
+                }
+
+                if (isRunning)
+                {
+                    Console.WriteLine();
+                    Console.Write("Press any key to return to the menu...");
+                    Console.ReadKey(true);
+                }
+            }
+
+            Console.WriteLine();
+            Console.WriteLine("Program closed. Goodbye!");
+        }
+
+        private static void DisplayMenu()
+        {
+            Console.WriteLine("==============================");
+            Console.WriteLine("   CALCULATOR AND GRADE CHECK");
+            Console.WriteLine("==============================");
+
+            for (int index = 0; index < MenuOptions.Length; index++)
+            {
+                Console.WriteLine((index + 1) + ". " + MenuOptions[index]);
+            }
+
+            Console.WriteLine("------------------------------");
+        }
+
+        private static void ExecuteArithmeticOperation(string operationName, string operationSymbol)
+        {
+            Console.WriteLine();
+            Console.WriteLine("--- " + operationName + " ---");
+
+            double[] operands = new double[2];
+            operands[0] = ReadDecimalNumber("Enter the first number: ");
+            operands[1] = ReadDecimalNumber("Enter the second number: ");
+
+            double result = CalculateResult(operands[0], operands[1], operationSymbol);
+
+            if (double.IsInfinity(result) || double.IsNaN(result))
+            {
+                throw new OverflowException();
+            }
+
+            Console.WriteLine();
+            Console.WriteLine(
+                FormatNumber(operands[0]) + " " + operationSymbol + " " + FormatNumber(operands[1]) +
+                " = " + FormatNumber(result));
+        }
+
+        private static double CalculateResult(double firstNumber, double secondNumber, string operationSymbol)
+        {
+            switch (operationSymbol)
+            {
+                case "+":
+                    return firstNumber + secondNumber;
+                case "-":
+                    return firstNumber - secondNumber;
+                case "*":
+                    return firstNumber * secondNumber;
+                case "/":
+                    if (secondNumber == 0)
+                    {
+                        throw new DivideByZeroException();
+                    }
+                    return firstNumber / secondNumber;
+                default:
+                    throw new InvalidOperationException("Unknown operation.");
+            }
+        }
+
+        private static void CheckStudentResult()
+        {
+            Console.WriteLine();
+            Console.WriteLine("--- Student result ---");
+            Console.WriteLine("Grades must be between " + MinimumGrade + " and " + MaximumGrade + ".");
+
+            int gradeCount = ReadWholeNumberInRange(
+                "How many grades will you enter? (" + MinimumGradeCount + "-" + MaximumGradeCount + "): ",
+                MinimumGradeCount,
+                MaximumGradeCount);
+
+            double[] grades = new double[gradeCount];
+
+            for (int index = 0; index < grades.Length; index++)
+            {
+                grades[index] = ReadDecimalNumberInRange(
+                    "Enter grade " + (index + 1) + ": ",
+                    MinimumGrade,
+                    MaximumGrade);
+            }
+
+            double total = 0;
+
+            for (int index = 0; index < grades.Length; index++)
+            {
+                total += grades[index];
+            }
+
+            double average = total / grades.Length;
+
+            Console.WriteLine();
+            Console.WriteLine("Average: " + average.ToString("F2", CultureInfo.InvariantCulture));
+            Console.WriteLine("Minimum passing average: " + PassingAverage.ToString("F2", CultureInfo.InvariantCulture));
+
+            if (average >= PassingAverage)
+            {
+                Console.WriteLine("Result: the student PASSED.");
+            }
+            else
+            {
+                Console.WriteLine("Result: the student FAILED.");
+            }
+        }
+
+        private static bool ConfirmExit()
+        {
+            while (true)
+            {
+                Console.Write("Are you sure you want to exit? (Y/N): ");
+                string answer = Console.ReadLine();
+
+                if (answer != null)
+                {
+                    string normalizedAnswer = answer.Trim().ToUpperInvariant();
+
+                    if (normalizedAnswer == "Y")
+                    {
+                        return true;
+                    }
+
+                    if (normalizedAnswer == "N")
+                    {
+                        return false;
+                    }
+                }
+
+                Console.WriteLine("Invalid answer. Type Y for yes or N for no.");
+            }
+        }
+
+        private static double ReadDecimalNumber(string message)
+        {
+            while (true)
+            {
+                Console.Write(message);
+                string input = Console.ReadLine();
+
+                if (TryParseDecimalNumber(input, out double value))
+                {
+                    return value;
+                }
+
+                Console.WriteLine("Invalid input. Please enter a valid number.");
+            }
+        }
+
+        private static double ReadDecimalNumberInRange(string message, double minimumValue, double maximumValue)
+        {
+            while (true)
+            {
+                double value = ReadDecimalNumber(message);
+
+                if (value >= minimumValue && value <= maximumValue)
+                {
+                    return value;
+                }
+
+                Console.WriteLine(
+                    "Value out of range. Enter a number between " + minimumValue + " and " + maximumValue + ".");
+            }
+        }
+
+        private static int ReadWholeNumberInRange(string message, int minimumValue, int maximumValue)
+        {
+            while (true)
+            {
+                Console.Write(message);
+                string input = Console.ReadLine();
+
+                if (int.TryParse(input, NumberStyles.Integer, CultureInfo.InvariantCulture, out int value))
+                {
+                    if (value >= minimumValue && value <= maximumValue)
+                    {
+                        return value;
+                    }
+
+                    Console.WriteLine(
+                        "Value out of range. Enter a whole number between " + minimumValue + " and " + maximumValue + ".");
+                }
+                else
+                {
+                    Console.WriteLine("Invalid input. Please enter a whole number.");
+                }
+            }
+        }
+
+        private static bool TryParseDecimalNumber(string input, out double value)
+        {
+            value = 0;
+
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                return false;
+            }
+
+            string normalizedInput = input.Trim().Replace(',', '.');
+
+            bool isParsed = double.TryParse(
+                normalizedInput,
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out value);
+
+            return isParsed && !double.IsInfinity(value) && !double.IsNaN(value);
+        }
+
+        private static string FormatNumber(double number)
+        {
+            return number.ToString("0.##########", CultureInfo.InvariantCulture);
+        }
+    }
+}
